@@ -14,3 +14,5 @@ data
 
 dist
 venv
+
+local-data
