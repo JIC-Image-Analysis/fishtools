@@ -17,3 +17,17 @@ def find_probe_locations_3d(stack, thresh=100):
     ]
 
     return centroids_int
+
+
+def get_counts_by_cell(cell_regions, probe_centroids):
+    centroids_by_cell = {
+        idx: {tuple(p) for p in cell_regions.rprops[idx].coords} & set(probe_centroids)
+        for idx in cell_regions.labels
+    }
+
+    counts_by_cell = {
+        idx: len(centroids)
+        for idx, centroids in centroids_by_cell.items()
+    }
+
+    return counts_by_cell

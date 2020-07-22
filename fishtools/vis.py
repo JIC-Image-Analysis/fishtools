@@ -44,10 +44,10 @@ def visualise_counts(maxproj, scaled_cell_regions, centroids):
      )
     boundary_pilimage = pilImage.fromarray(boundary_image)
     draw = ImageDraw.ImageDraw(boundary_pilimage)
-    font = ImageFont.truetype("Microsoft Sans Serif.ttf", size=24)
+    font = ImageFont.truetype("Microsoft Sans Serif.ttf", size=16)
 
     for idx, count in counts_by_cell.items():
         r, c = map(int, scaled_cell_regions.rprops[idx].centroid)
-        draw.text((c-12, r-12), f"{count}", font=font)
+        draw.text((c-20, r-12), f"[{idx}] {count}", font=font)
 
     return boundary_pilimage
