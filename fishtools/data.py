@@ -15,7 +15,7 @@ from dtoolbioimage import (
 
 from fishtools.utils import extract_nuclei, crop_to_non_empty, select_near_colour
 from fishtools.segment import scale_segmentation, cell_mask_from_fishimage
-from fishtools.probes import find_probe_locations_3d
+from fishtools  .probes import find_probe_locations_3d
 
 
 @dataclass

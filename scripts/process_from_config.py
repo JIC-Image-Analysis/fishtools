@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import click
 import parse
+import dtoolcore
 import skimage.measure
 import pandas as pd
 
@@ -49,7 +50,7 @@ def get_specs(config):
     fnameiter = (fpath.name for fpath in diriter)
 
     logger.debug(f"Matching with {config.annotation_template}")
-    
+
     specs = [
         parse.parse(config.annotation_template, fname).named
         for fname in fnameiter
@@ -58,7 +59,7 @@ def get_specs(config):
     return specs
 
 
-def process_dataitem(dataitem, spec, params, config):
+def process_dataitem(dataitem, spec, params, config, output_ds):
 
     probe_locs = dataitem.probe_locs_2d(params.probethresh)
     filtered_segmentation = get_filtered_segmentation(dataitem, params)
@@ -69,9 +70,9 @@ def process_dataitem(dataitem, spec, params, config):
 
     )
 
-    output_dirpath = pathlib.Path(config.output_dirpath)
     output_fname = "vis{n}.png".format(**spec)
-    vis.save(output_dirpath/"images"/output_fname)
+    image_abspath = output_ds.prepare_staging_abspath_promise(f"images/{output_fname}")
+    vis.save(image_abspath)
 
     areas_by_cell = {
         l: int(filtered_segmentation.rprops[l].area)
@@ -90,7 +91,8 @@ def process_dataitem(dataitem, spec, params, config):
 
     df = pd.DataFrame(measurements)
     csv_output_fname = "results{n}.csv".format(**spec)
-    df.to_csv(output_dirpath/"csv"/csv_output_fname, index=False)
+    csv_abspath = output_ds.prepare_staging_abspath_promise(f"csv/{csv_output_fname}")
+    df.to_csv(csv_abspath, index=False)
 
 
 @click.command()
@@ -105,20 +107,21 @@ def main(config_fpath):
 
     specs = get_specs(config)
 
-    # for spec in specs:
+    readme_str = config.as_readme_format()
 
-    # spec = {'n': 3}
+    with dtoolcore.DataSetCreator(
+        config.output_name,
+        config.output_base_uri
+    ) as output_ds:
+        for spec in specs:
+            logger.info("Processing n={n}".format(**spec))
 
-    for spec in specs:
-        logger.info("Processing n={n}".format(**spec))
-
-        try:
-            dataitem = dl.load_by_specifier(**spec)
-            process_dataitem(dataitem, spec, params, config)
-        except FileNotFoundError as err:
-            logger.warning(f"Couldn't load: {err}")
-
-
+            try:
+                dataitem = dl.load_by_specifier(**spec)
+                process_dataitem(dataitem, spec, params, config, output_ds)
+            except FileNotFoundError as err:
+                logger.warning(f"Couldn't load: {err}")
+        output_ds.put_readme(readme_str)
 
 
 if __name__ == "__main__":
