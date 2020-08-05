@@ -9,7 +9,7 @@ import skimage.measure
 import pandas as pd
 
 from fishtools.config import Config
-from fishtools.data import DataLoader
+from fishtools.data import DataLoader, get_specs
 from fishtools.segment import segmentation_from_nuclear_channel_and_markers, segmentation_from_cellmask_and_label_image, scale_segmentation, filter_segmentation_by_region_list
 from fishtools.vis import visualise_counts
 from fishtools.probes import get_counts_by_cell
@@ -45,20 +45,6 @@ def get_filtered_segmentation(dataitem, params):
     return filtered_segmentation
 
 
-def get_specs(config):
-    diriter = pathlib.Path(config.annotation_dirpath).iterdir()
-    fnameiter = (fpath.name for fpath in diriter)
-
-    logger.debug(f"Matching with {config.annotation_template}")
-
-    specs = [
-        parse.parse(config.annotation_template, fname).named
-        for fname in fnameiter
-    ]
-
-    return specs
-
-
 def process_dataitem(dataitem, spec, params, config, output_ds):
 
     probe_locs = dataitem.probe_locs_2d(params.probethresh)
@@ -70,7 +56,8 @@ def process_dataitem(dataitem, spec, params, config, output_ds):
 
     )
 
-    output_fname = "vis{n}.png".format(**spec)
+    # FIXME
+    output_fname = "vis{expid}.png".format(**spec)
     image_abspath = output_ds.prepare_staging_abspath_promise(f"images/{output_fname}")
     vis.save(image_abspath)
 
@@ -90,9 +77,12 @@ def process_dataitem(dataitem, spec, params, config, output_ds):
     ]
 
     df = pd.DataFrame(measurements)
-    csv_output_fname = "results{n}.csv".format(**spec)
+    # FIXME 
+    csv_output_fname = "results{expid}.csv".format(**spec)
     csv_abspath = output_ds.prepare_staging_abspath_promise(f"csv/{csv_output_fname}")
     df.to_csv(csv_abspath, index=False)
+
+    return df
 
 
 @click.command()
@@ -109,18 +99,25 @@ def main(config_fpath):
 
     readme_str = config.as_readme_format()
 
+    dfs = []
     with dtoolcore.DataSetCreator(
         config.output_name,
         config.output_base_uri
     ) as output_ds:
         for spec in specs:
-            logger.info("Processing n={n}".format(**spec))
-
+            # FIXME
+            logger.info("Processing n={expid}".format(**spec))
             try:
                 dataitem = dl.load_by_specifier(**spec)
-                process_dataitem(dataitem, spec, params, config, output_ds)
+                df = process_dataitem(dataitem, spec, params, config, output_ds)
+                df['expid'] = spec['expid']
+                dfs.append(df)
             except FileNotFoundError as err:
                 logger.warning(f"Couldn't load: {err}")
+
+        summary_output_abspath = output_ds.prepare_staging_abspath_promise(f"summary.csv")
+        pd.concat(dfs).to_csv(summary_output_abspath, index=False)
+
         output_ds.put_readme(readme_str)
 
 
