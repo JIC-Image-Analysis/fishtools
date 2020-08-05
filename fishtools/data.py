@@ -1,9 +1,12 @@
 import os
+import logging
+import pathlib
 
 from dataclasses import dataclass
 from typing import List
 from types import SimpleNamespace
 
+import parse
 import numpy as np
 
 from dtoolbioimage import (
@@ -15,7 +18,10 @@ from dtoolbioimage import (
 
 from fishtools.utils import extract_nuclei, crop_to_non_empty, select_near_colour
 from fishtools.segment import scale_segmentation, cell_mask_from_fishimage
-from fishtools  .probes import find_probe_locations_3d
+from fishtools.probes import find_probe_locations_3d
+
+
+logger = logging.getLogger("fishtools")
 
 
 @dataclass
@@ -132,3 +138,21 @@ class DataLoader(object):
         return DataItem(fishimage, deconv_stack, annotation, self.config)
     
 
+def get_specs(config):
+    diriter = pathlib.Path(config.annotation_dirpath).iterdir()
+    fnameiter = (fpath.name for fpath in diriter)
+
+    logger.debug(f"Matching with {config.annotation_template}")
+
+    all_specs = [
+        parse.parse(config.annotation_template, fname)
+        for fname in fnameiter
+    ]
+
+    valid_specs = [
+        spec.named
+        for spec in all_specs
+        if spec is not None
+    ]
+
+    return valid_specs
