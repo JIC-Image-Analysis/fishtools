@@ -7,8 +7,9 @@ authors = ["Matthew Hartley <mhartley@cantab.net>"]
 [tool.poetry.dependencies]
 python = "^3.8"
 dtoolbioimage = "^0.1.9"
-dtool-azure = "^0.7.1"
-jupyter = "^1.0.0"
+"ruamel.yaml" = "^0.16.10"
+pandas = "^1.0.5"
+parse = "^1.16.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
