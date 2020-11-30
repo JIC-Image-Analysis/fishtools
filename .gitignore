@@ -18,3 +18,4 @@ venv
 local-data
 results
 runfiles
+scratch
