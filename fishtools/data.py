@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 import parse
 import numpy as np
+import skimage.measure
 
 from dtoolbioimage import (
     Image as dbiImage,
@@ -156,3 +157,126 @@ def get_specs(config):
     ]
 
     return valid_specs
+
+
+def get_slice(config, spec):
+    # FIXME - put this in config
+    template = "{expid}-{expid}.png"
+    fname = template.format(**spec)
+    fpath = os.path.join(config.annotation_dirpath, fname)
+    im = dbiImage.from_file(fpath)
+
+    regionim = (im[:, :, 3] == 255)
+    r = skimage.measure.regionprops(skimage.measure.label(regionim))[0]
+    rmin, cmin, rmax, cmax = r.bbox
+    return np.s_[rmin:rmax, cmin:cmax]
+
+
+def mask_from_template_and_spec(template, config, spec, sl):
+    fname = template.format(**spec)
+    fpath = os.path.join(config.annotation_dirpath, fname)
+    im = dbiImage.from_file(fpath)
+    maxflatten = np.max(im[:, :, :3], axis=2)
+    return (maxflatten > 0)[sl]
+
+
+class MultiAnnotationDataLoader(DataLoader):
+
+    def load_by_specifier(self, **kwargs):
+        pass
+
+
+class MultiAnnotationDataItem(object):
+
+    def __init__(self, config, spec):
+        self.config = config
+        self.ids = ImageDataSet(self.config.ids_uri)
+
+        nuclear_channel_first = True
+        image_name = self.config.image_name_template.format(**spec)
+        series_name = self.config.series_name_template.format(**spec)
+        self.fishimage = FISHImage.from_ids_im_sn(
+            self.ids, image_name, series_name, nuclear_channel_first
+        )
+
+        fname = self.config.deconv_fname_template.format(**spec)
+        fpath = os.path.join(self.config.deconv_dirpath, fname)
+        self.deconv_stack = Image3D.from_file(fpath)
+
+        sl = get_slice(config, spec)
+        self.good_mask = mask_from_template_and_spec(
+            config.good_template,
+            config,
+            spec,
+            sl
+        )
+        self.bad_mask = mask_from_template_and_spec(
+            config.bad_template,
+            config,
+            spec,
+            sl
+        )
+        self.nuc_mask = mask_from_template_and_spec(
+            config.nuc_template,
+            config,
+            spec,
+            sl
+        )
+
+    @property
+    def all_mask(self):
+        return self.nuc_mask
+        # return self.bad_mask ^ self.good_mask
+
+    @property
+    def maxproj(self):
+        return np.max(self.deconv_stack, axis=2).view(dbiImage)
+
+    @property
+    def scaled_markers(self):
+        scaled_markers = scale_segmentation(self.all_mask, self.maxproj)
+        return scaled_markers
+
+    def cell_mask(self, params):
+        cell_mask = cell_mask_from_fishimage(
+            self.fishimage, params
+        ).view(dbiImage)
+
+        return cell_mask
+
+    def probe_locs_2d(self, thresh=100):
+        probe_locs_3d = find_probe_locations_3d(self.deconv_stack, thresh)
+        probe_locs_2d = [(r, c) for r, c, z in probe_locs_3d]
+
+        return probe_locs_2d
+
+
+def load_wubbly(config, spec):
+
+    di = MultiAnnotationDataItem(config, spec)
+
+    return di
+
+
+
+    # template = "{expid}-good.png"
+    # fname = template.format(**spec)
+
+    # fpath = os.path.join(config.annotation_dirpath, fname)
+
+    # good = dbiImage.from_file(fpath)
+
+    # print(good.shape)
+
+    # # good_rgb = good[:,:,:3]
+
+    # # good_rgb.save("foo.png")
+
+    # template = "{expid}-bad.png"
+    # fname = template.format(**spec)
+
+    # fpath = os.path.join(config.annotation_dirpath, fname)
+
+    # good = dbiImage.from_file(fpath)
+
+    # print(good.shape)

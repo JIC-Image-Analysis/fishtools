@@ -29,6 +29,8 @@ def merge_composite_from_fishimage(fishimage, cell_mask):
 
 
 def visualise_counts(maxproj, scaled_cell_regions, centroids):
+    maxproj = scale_to_uint8(maxproj)
+    
     centroids_by_cell = {
         idx: {tuple(p) for p in scaled_cell_regions.rprops[idx].coords} & set(centroids)
         for idx in scaled_cell_regions.labels
