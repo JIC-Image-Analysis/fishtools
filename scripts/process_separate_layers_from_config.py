@@ -140,7 +140,14 @@ def main(config_fpath):
 
     dl = DataLoader(config.raw_config)
 
-    specs = get_specs(config)
+    all_specs = get_specs(config)
+
+    import random
+    # specs = random.sample(all_specs, 10)
+    specs = all_specs
+
+    # print(specs)
+    # import sys; sys.exit(0)
 
     # print(specs)
     # from dtoolbioimage import ImageDataSet
@@ -174,11 +181,12 @@ def main(config_fpath):
         config.output_name,
         config.output_base_uri
     ) as output_ds:
-        for spec in specs[:1]:
+        for spec in specs:
             # FIXME
             logger.info("Processing n={expid}".format(**spec))
             try:
                 # dataitem = dl.load_by_specifier(**spec)
+                # FIXME - naming!
                 dataitem = load_wubbly(config, spec)
                 df = process_dataitem(dataitem, spec, params, config, output_ds)
                 df['expid'] = spec['expid']

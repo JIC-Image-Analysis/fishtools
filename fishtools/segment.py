@@ -82,7 +82,10 @@ def filter_segmentation_by_region_list(segmentation, region_ids):
 
 
 def segmentation_from_nuclear_channel_and_markers(fishimage, label_img, params):
+
     nucmask = nuc_cell_mask_from_fishimage(fishimage, params)
+    # print(nucmask.shape, label_img.shape)
+    assert nucmask.shape == label_img.shape
 
     n_segmentation = skimage.segmentation.watershed(
         -scipy.ndimage.distance_transform_edt(nucmask),

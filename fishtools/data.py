@@ -203,6 +203,11 @@ class MultiAnnotationDataItem(object):
         fpath = os.path.join(self.config.deconv_dirpath, fname)
         self.deconv_stack = Image3D.from_file(fpath)
 
+        if self.deconv_stack.shape != self.fishimage.nuclei.shape:
+            logger.warning("Deconv stack doesn't match shape, trimming")
+            rdim, cdim, zdim = self.fishimage.nuclei.shape
+            self.deconv_stack = self.deconv_stack[:rdim,:cdim,:zdim]
+
         sl = get_slice(config, spec)
         self.good_mask = mask_from_template_and_spec(
             config.good_template,
@@ -234,6 +239,8 @@ class MultiAnnotationDataItem(object):
 
     @property
     def scaled_markers(self):
+        # print(f"Scaling to {self.maxproj.shape}")
+        # print(f"Diag {self.deconv_stack.shape}, {self.fishimage.nuclei.shape}")
         scaled_markers = scale_segmentation(self.all_mask, self.maxproj)
         return scaled_markers
 
