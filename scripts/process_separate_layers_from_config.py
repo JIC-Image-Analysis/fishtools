@@ -159,7 +159,7 @@ def main(config_fpath):
     # df = dl.load_by_specifier(**spec)
 
 
-    from fishtools.data import load_wubbly
+    from fishtools.data import load_multiannotation_di
     from dtoolbioimage import Image as dbiImage
 
     # TODO - some visual info dumping
@@ -187,7 +187,7 @@ def main(config_fpath):
             try:
                 # dataitem = dl.load_by_specifier(**spec)
                 # FIXME - naming!
-                dataitem = load_wubbly(config, spec)
+                dataitem = load_multiannotation_di(config, spec)
                 df = process_dataitem(dataitem, spec, params, config, output_ds)
                 df['expid'] = spec['expid']
                 dfs.append(df)

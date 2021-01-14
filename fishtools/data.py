@@ -161,8 +161,8 @@ def get_specs(config):
 
 def get_slice(config, spec):
     # FIXME - put this in config
-    template = "{expid}-{expid}.png"
-    fname = template.format(**spec)
+    # template = "{expid}-{expid}.png"
+    fname = config.slice_template.format(**spec)
     fpath = os.path.join(config.annotation_dirpath, fname)
     im = dbiImage.from_file(fpath)
 
@@ -202,6 +202,8 @@ class MultiAnnotationDataItem(object):
         fname = self.config.deconv_fname_template.format(**spec)
         fpath = os.path.join(self.config.deconv_dirpath, fname)
         self.deconv_stack = Image3D.from_file(fpath)
+
+        self.deconv_stack = np.clip(self.deconv_stack, 0, 10000)
 
         if self.deconv_stack.shape != self.fishimage.nuclei.shape:
             logger.warning("Deconv stack doesn't match shape, trimming")
@@ -258,32 +260,8 @@ class MultiAnnotationDataItem(object):
         return probe_locs_2d
 
 
-def load_wubbly(config, spec):
+def load_multiannotation_di(config, spec):
 
     di = MultiAnnotationDataItem(config, spec)
 
     return di
-
-
-
-    # template = "{expid}-good.png"
-    # fname = template.format(**spec)
-
-    # fpath = os.path.join(config.annotation_dirpath, fname)
-
-    # good = dbiImage.from_file(fpath)
-
-    # print(good.shape)
-
-    # # good_rgb = good[:,:,:3]
-
-    # # good_rgb.save("foo.png")
-
-    # template = "{expid}-bad.png"
-    # fname = template.format(**spec)
-
-    # fpath = os.path.join(config.annotation_dirpath, fname)
-
-    # good = dbiImage.from_file(fpath)
-
-    # print(good.shape)

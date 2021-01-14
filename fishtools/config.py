@@ -11,6 +11,11 @@ class Config(object):
         with open(config_fpath) as fh:
             self.raw_config = yaml.load(fh)
 
+    @classmethod
+    def from_fpath(cls, config_fpath):
+        self = cls(config_fpath)
+        return self
+        
     def __getattr__(self, name):
         return self.raw_config[name]
 
