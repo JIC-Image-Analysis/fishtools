@@ -232,8 +232,8 @@ class MultiAnnotationDataItem(object):
 
     @property
     def all_mask(self):
-        return self.nuc_mask
-        # return self.bad_mask ^ self.good_mask
+        # return self.nuc_mask
+        return self.bad_mask ^ self.good_mask
 
     @property
     def maxproj(self):
