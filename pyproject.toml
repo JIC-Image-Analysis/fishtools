@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "fishtools"
-version = "0.1.0"
-description = ""
+version = "0.1.1"
+description = "Tools for analysing FISH data."
 authors = ["Matthew Hartley <mhartley@cantab.net>"]
 
 [tool.poetry.scripts]
@@ -9,7 +9,7 @@ fishtools-process = "fishtools.process:process_from_config"
 
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.7"
 dtoolbioimage = "^0.1.9"
 "ruamel.yaml" = "^0.16.10"
 pandas = "^1.0.5"
