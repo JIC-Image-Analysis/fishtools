@@ -117,7 +117,7 @@ def process_from_config(config_fpath):
             logger.info("Processing n={expid}".format(**spec))
             try:
                 # FIXME - naming!
-                dataitem = load_multiannotation_di(config, spec)
+                dataitem = load_multiannotation_di(config, spec, config.use_deconv)
                 df = process_dataitem(
                     dataitem, spec, params, config, output_ds)
                 df['expid'] = spec['expid']

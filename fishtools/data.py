@@ -188,7 +188,7 @@ class MultiAnnotationDataLoader(DataLoader):
 
 class MultiAnnotationDataItem(object):
 
-    def __init__(self, config, spec):
+    def __init__(self, config, spec, use_deconv=True):
         self.config = config
         self.ids = ImageDataSet(self.config.ids_uri)
 
@@ -230,6 +230,12 @@ class MultiAnnotationDataItem(object):
             sl
         )
 
+        if use_deconv:
+            self.probe_stack = self.deconv_stack
+        else:
+            self.probe_stack = self.fishimage.probes[0]
+
+
     @property
     def all_mask(self):
         # return self.nuc_mask
@@ -237,7 +243,7 @@ class MultiAnnotationDataItem(object):
 
     @property
     def maxproj(self):
-        return np.max(self.deconv_stack, axis=2).view(dbiImage)
+        return np.max(self.probe_stack, axis=2).view(dbiImage)
 
     @property
     def scaled_markers(self):
@@ -254,14 +260,15 @@ class MultiAnnotationDataItem(object):
         return cell_mask
 
     def probe_locs_2d(self, thresh=100):
-        probe_locs_3d = find_probe_locations_3d(self.deconv_stack, thresh)
+
+        probe_locs_3d = find_probe_locations_3d(self.probe_stack, thresh)
         probe_locs_2d = [(r, c) for r, c, z in probe_locs_3d]
 
         return probe_locs_2d
 
 
-def load_multiannotation_di(config, spec):
+def load_multiannotation_di(config, spec, use_deconv=True):
 
-    di = MultiAnnotationDataItem(config, spec)
+    di = MultiAnnotationDataItem(config, spec, use_deconv)
 
     return di
