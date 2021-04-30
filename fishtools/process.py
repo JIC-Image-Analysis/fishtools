@@ -21,16 +21,19 @@ logger = logging.getLogger("fishtools")
 
 
 def get_filtered_segmentation(dataitem, params):
-    nuc_label_image = segmentation_from_nuclear_channel_and_markers(
-        dataitem.fishimage,
-        skimage.measure.label(dataitem.scaled_markers),
-        params
-    )
-    nuc_label_image.pretty_color_image.view(dbiImage).save("nuc_label_img.png")
+
+    # nuc_label_image = segmentation_from_nuclear_channel_and_markers(
+    #     dataitem.fishimage, 
+    #     skimage.measure.label(dataitem.scaled_markers),
+    #     params
+    # )
+    # nuc_label_image.pretty_color_image.view(dbiImage).save("nuc_label_img.png")
+    # dataitem.cell_mask(params).view(dbiImage).save("cell_mask.png")
 
     segmentation = segmentation_from_cellmask_and_label_image(
         dataitem.cell_mask(params),
-        nuc_label_image
+        skimage.measure.label(dataitem.scaled_markers)
+        # nuc_label_image
     )
 
     scaled_good_mask = scale_segmentation(dataitem.good_mask, dataitem.maxproj)
@@ -46,6 +49,25 @@ def get_filtered_segmentation(dataitem, params):
     )
 
     return filtered_segmentation
+
+
+def visualise_marker_positions(dataitem):
+
+    r = dataitem.bad_mask
+    g = dataitem.good_mask
+    b = dataitem.nuc_mask
+
+    import numpy as np
+    from dtoolbioimage import scale_to_uint8
+    merged = np.dstack([r, g, b])
+    scaled = scale_to_uint8(scale_segmentation(merged, dataitem.maxproj))
+    maxproj_rgb = scale_to_uint8(np.dstack(3 * [dataitem.maxproj]))
+    scaled.view(dbiImage).save("scaled.png")
+    v = 0.5 * scaled + 0.5 * maxproj_rgb
+    v.view(dbiImage).save("v.png")
+
+    visd = np.array(vis).view(dbiImage)
+    (0.5 * visd + 0.5 * scaled).view(dbiImage).save("svis.png")
 
 
 def process_dataitem(dataitem, spec, params, config, output_ds):
@@ -122,7 +144,7 @@ def process_from_config(config_fpath):
                     dataitem, spec, params, config, output_ds)
                 df['expid'] = spec['expid']
                 dfs.append(df)
-            except FileNotFoundError as err:
+            except (FileNotFoundError, IndexError) as err:
                 logger.warning(f"Couldn't load: {err}")
 
         summary_output_abspath = output_ds.prepare_staging_abspath_promise(

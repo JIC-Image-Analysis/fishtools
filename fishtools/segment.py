@@ -85,7 +85,6 @@ def filter_segmentation_by_region_list(segmentation, region_ids):
 def segmentation_from_nuclear_channel_and_markers(fishimage, label_img, params):
 
     nucmask = nuc_cell_mask_from_fishimage(fishimage, params)
-    # print(nucmask.shape, label_img.shape)
     assert nucmask.shape == label_img.shape
 
     n_segmentation = skimage.segmentation.watershed(
@@ -139,7 +138,7 @@ def get_filtered_segmentation(dataitem, params):
         skimage.measure.label(dataitem.scaled_markers),
         params
     )
-    nuc_label_image.pretty_color_image.view(dbiImage).save("nuc_label_img.png")
+    # nuc_label_image.pretty_color_image.view(dbiImage).save("nuc_label_img.png")
 
     segmentation = segmentation_from_cellmask_and_label_image(
         dataitem.cell_mask(params),
