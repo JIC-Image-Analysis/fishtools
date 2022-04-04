@@ -1,0 +1,56 @@
+### Instructions for running fishtools code after successful installation
+
+## step 0 - Requirements before running
+# Annotate your raw images in ImageJ with MultiPoint tool giving a different counter to cells that you want to measure, cells (or rubbish in image) that you want to avoid (especially if it is close to your good cells) and nuclei positions
+# Save this using the ImageJ plugin "save_annotation.py" included in folder fishtools/imageJ_plugin
+# Prepare a config file like the attached config.yml file
+# This needs to specify the directories of your data, annotations and intermediate files (see step 4)
+# It must also specify the folder (config: "output_base_uri", which must be an existing folder!) into which the results (config: "output_name" folder) will go
+# It also needs to give the counter for each of the different types (good, bad, nuc)
+# It also needs to give parameter values. Start with those already in cofig file and adjust for your image to get better results.
+
+## step 1 - Go to the fishtools folder
+cd fishtools
+
+## step 2
+# Run the following commands so that the correct version of all the installed packages is accessible to fishtools.
+export PATH=$PATH:~/packages/bftools
+source venv/bin/activate
+
+## step 3 - OPTIONAL
+# For Windows WSL
+# in case you need to use a folder not in your home directory you need to mount it each time you restart WSL (e.g. for a hypothetical drive Z)
+sudo mount -t drvfs Z: /mnt/z
+# will need password
+
+## step 4 - Create intermediate "ids" folder from raw czi files
+# This only needs to be done once per dataset
+# output folder needs to be specified in config.yml file for further steps
+python fishtools_scripts/quick_convert_to_ids.py "$_1" "$_2" "$_ids"
+# Where $_1 should be replaced by folder where the czi files are
+# $_2 should be the folder where you want to place the ids folder
+# $_ids should be the name you want to give the ids folder
+
+## step 5 - run the segmentation and quantification program
+python fishtools_scripts/fishtools.py "$_dir_of_config.yml"
+# Where $_dir_of_config.yml is the location of the config.yml file
+# Ctrl+C can stop code at any time, e.g. when a few images are done to test output. Cannot resume after, will start over
+
+## step 6 - test output and adjust parameters
+# results include folder data which contains "summary.csv" file (if run to the end). This is the quantification of all cells in all images of dataset
+# contained is also the folder "images", which shows visually the segmentation and quantification for all cells in each image separately
+# folder "csv" contains the quantifications in the summary.csv but separately for each image
+# folder "csv_locations" contains the coordinates of the probe locations for each image separated for each cell. This can be loaded back into ImageJ to test the results.
+# ImageJ plugin "load_probe_positions_3d.py" (included in folder fishtools/imageJ-plugin) tested in ImageJ 1.53f51
+# Open the czi file in ImageJ and then run the new plugin.
+# It will open a dialog to select a folder. Find the csv_locations folder that includes the same experiment number (expid) as the open czi file.
+# Adjust parameters until results capture real probes
+# Parameter "ball_size" relates to the size of the probe dots
+# Parameter "probethresh" relates to intensity of probe dots
+
+## step 7 - (OPTIONAL) Filter output according to segmentation quality
+# according to the images folder, cells with bad segmentation can be manually selected for exclusion
+# a file containing the cells to be excluded as well as other optional details must be prepared following the format of the given "manual_assessment_example.txt" file. File must be sorted by "Image" column (expid).
+# "summary.csv" file output of step 6 must be sorted by expid and then by label
+python filtering_and_processing/exclude_selected.py "$_dir_to_manual_assessment.txt" "$_dir_to_results_summary.csv"
+# Where $_dir_to_manual_assessment.txt is the location of the file containing which cells should be excluded, and $_dir_to_results_summary.csv is the location of the sorted results file ("summary.csv")

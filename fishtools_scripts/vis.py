@@ -5,7 +5,7 @@ import PIL.Image as pilImage
 
 from dtoolbioimage import Image as dbiImage, scale_to_uint8
 
-from fishtools.utils import force_to_2d_rgb
+from utils import force_to_2d_rgb
 
 
 def maxproj_composite_from_fishimage(fishimage, probe_channel=0):
@@ -28,14 +28,16 @@ def merge_composite_from_fishimage(fishimage, cell_mask):
      return merge_composite
 
 
-def visualise_counts(maxproj, scaled_cell_regions, centroids):
-    maxproj = scale_to_uint8(maxproj)
+def visualise_counts(dataitem, scaled_cell_regions, centroids_by_cell):
+    scaled_dots = np.dstack((dataitem.scaled_good_dotImage,dataitem.scaled_bad_dotImage,dataitem.scaled_nuc_dotImage)).view(dbiImage)
     
-    centroids_by_cell = {
-        idx: {tuple(p) for p in scaled_cell_regions.rprops[idx].coords} & set(centroids)
-        for idx in scaled_cell_regions.labels
-    }
-
+    if dataitem.annotation_type == 'csv':
+        maxproj = (dataitem.scaled_sliceImage + scaled_dots/255*65535).view(dbiImage)
+        maxproj = scale_to_uint8(maxproj)
+    else:
+        maxproj = (dataitem.scaled_sliceImage + scaled_dots).view(dbiImage)
+        maxproj = scale_to_uint8(maxproj)
+    
     counts_by_cell = {
         idx: len(centroids)
         for idx, centroids in centroids_by_cell.items()
@@ -46,7 +48,7 @@ def visualise_counts(maxproj, scaled_cell_regions, centroids):
      )
     boundary_pilimage = pilImage.fromarray(boundary_image)
     draw = ImageDraw.ImageDraw(boundary_pilimage)
-    font = ImageFont.truetype("Microsoft Sans Serif.ttf", size=16)
+    font = ImageFont.truetype("fishtools_scripts/Roboto-Regular.ttf", size=16)
 
     for idx, count in counts_by_cell.items():
         r, c = map(int, scaled_cell_regions.rprops[idx].centroid)
