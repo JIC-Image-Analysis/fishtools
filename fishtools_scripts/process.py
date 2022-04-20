@@ -10,11 +10,11 @@ import pandas as pd
 
 from dtoolbioimage import Image as dbiImage
 
-from fishtools.config import Config
-from fishtools.data import DataLoader, get_specs
-from fishtools.segment import segmentation_from_nuclear_channel_and_markers, segmentation_from_cellmask_and_label_image, scale_segmentation, filter_segmentation_by_region_list
-from fishtools.vis import visualise_counts
-from fishtools.probes import get_counts_by_cell
+from config import Config
+from data import get_specs
+from segment import segmentation_from_cellmask_and_label_image, scale_segmentation, filter_segmentation_by_region_list
+from vis import visualise_counts
+from probes import get_counts_by_cell
 
 
 logger = logging.getLogger("fishtools")
@@ -22,30 +22,23 @@ logger = logging.getLogger("fishtools")
 
 def get_filtered_segmentation(dataitem, params):
 
-    # nuc_label_image = segmentation_from_nuclear_channel_and_markers(
-    #     dataitem.fishimage, 
-    #     skimage.measure.label(dataitem.scaled_markers),
-    #     params
-    # )
-    # nuc_label_image.pretty_color_image.view(dbiImage).save("nuc_label_img.png")
-    # dataitem.cell_mask(params).view(dbiImage).save("cell_mask.png")
-
     segmentation = segmentation_from_cellmask_and_label_image(
         dataitem.cell_mask(params),
         skimage.measure.label(dataitem.scaled_markers)
-        # nuc_label_image
     )
 
-    scaled_good_mask = scale_segmentation(dataitem.good_mask, dataitem.maxproj)
-    labelled_points = skimage.measure.label(scaled_good_mask)
-    rprops = skimage.measure.regionprops(labelled_points)
-    region_centroids = [r.centroid for r in rprops]
-    icentroids = [(int(r), int(c)) for r, c in region_centroids]
-    good_regions = [segmentation[r, c] for r, c in icentroids]
+    good_regions = [segmentation[r, c] for r, c in dataitem.icentroids] # Find the segmentation values (==labels) at the pixel centroids of each of the good dots
+
+    nuc_regions = [segmentation[r, c] for r, c in dataitem.nuc_centroids] # Find the segmentation values (==labels) at the pixel centroids of each of the nuc dots
+
+    good_nuc_regions = []
+    for i in good_regions:
+        if sum([j==i for j in nuc_regions])==1:
+            good_nuc_regions.append(i)
 
     filtered_segmentation = filter_segmentation_by_region_list(
         segmentation,
-        good_regions
+        good_nuc_regions
     )
 
     return filtered_segmentation
@@ -72,12 +65,18 @@ def visualise_marker_positions(dataitem):
 
 def process_dataitem(dataitem, spec, params, config, output_ds):
 
-    probe_locs = dataitem.probe_locs_2d(params.probethresh)
+    probe_locs = dataitem.probe_locs_2d(params.probethresh, params.ball_size)
     filtered_segmentation = get_filtered_segmentation(dataitem, params)
+    
+    centroids_by_cell = {
+        idx: {tuple(p) for p in filtered_segmentation.rprops[idx].coords} & set(probe_locs)
+        for idx in filtered_segmentation.labels
+    }
+    
     vis = visualise_counts(
-        dataitem.maxproj,
+        dataitem,
         filtered_segmentation,
-        probe_locs
+        centroids_by_cell
     )
 
     # FIXME
@@ -85,6 +84,36 @@ def process_dataitem(dataitem, spec, params, config, output_ds):
     image_abspath = output_ds.prepare_staging_abspath_promise(
         f"images/{output_fname}")
     vis.save(image_abspath)
+
+
+    probe_locs_3d = dataitem.probe_locs_3d(params.probethresh, params.ball_size)
+    
+    centroids_3d_by_cell={}
+    for idx, centroids in centroids_by_cell.items():
+        p3d=set()
+        for p in probe_locs_3d:
+            if tuple(p[0:2]) in centroids:
+                p3d.add(tuple(p))
+        centroids_3d_by_cell[idx] = p3d
+        
+    
+
+    import numpy as np
+    locations = {'label':[], 'xpoint':[], 'ypoint':[], 'zpoint':[]}
+    for idx, centroids in centroids_3d_by_cell.items():
+        for p in centroids:
+            locations['label'].append(idx)
+            locations['xpoint'].append(p[0]+int(params.ball_size/2))
+            locations['ypoint'].append(p[1]+int(params.ball_size/2))
+            locations['zpoint'].append(p[2]+1+int(params.ball_size/2))
+
+    
+    df = pd.DataFrame(locations)
+    # FIXME
+    csv_locations_output_fname = "locations{expid}.csv".format(**spec)
+    csv_locations_abspath = output_ds.prepare_staging_abspath_promise(
+        f"csv_locations/{csv_locations_output_fname}")
+    df.to_csv(csv_locations_abspath, index=False)
 
     areas_by_cell = {
         l: int(filtered_segmentation.rprops[l].area)
@@ -119,13 +148,11 @@ def process_from_config(config_fpath):
     config = Config(config_fpath)
     params = SimpleNamespace(**config.params)
 
-    dl = DataLoader(config.raw_config)
-
     all_specs = get_specs(config)
 
     specs = all_specs
 
-    from fishtools.data import load_multiannotation_di
+    from data import load_multiannotation_di
     from dtoolbioimage import Image as dbiImage
 
     readme_str = config.as_readme_format()
@@ -137,9 +164,17 @@ def process_from_config(config_fpath):
     ) as output_ds:
         for spec in specs:
             logger.info("Processing n={expid}".format(**spec))
+            
             try:
-                # FIXME - naming!
-                dataitem = load_multiannotation_di(config, spec, config.use_deconv)
+                use_deconv = config.deconv_fname_template
+                use_deconv = config.deconv_dirpath
+                use_deconv = config.use_deconv
+            except KeyError:
+                use_deconv = False
+                logger.info("Not using deconvolution. Option not set or missing optional arguments: use_deconv, deconv_dirpath, deconv_fname_template")
+                
+            try:
+                dataitem = load_multiannotation_di(config, spec, use_deconv)
                 df = process_dataitem(
                     dataitem, spec, params, config, output_ds)
                 df['expid'] = spec['expid']

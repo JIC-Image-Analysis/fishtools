@@ -1,0 +1,28 @@
+---
+images_root_dirpath: "FOLDER_LOCATION"
+use_deconv: False
+deconv_dirpath: "FOLDER_LOCATION"
+ids_uri: "FOLDER_LOCATION"
+annotation_dirpath: "FOLDER_LOCATION"
+annotation_type: image
+annotation_template: "{expid:d}-Background-Layer.png"
+good_template: "{expid}-good.png"
+bad_template: "{expid}-bad.png"
+nuc_template: "{expid}-nuc.png"
+slice_template: "{expid}-{expid}.png"
+deconv_fname_template: Experiment-{expid}_Experiment-{expid}_0_qmle_ch01.tif
+image_name_template: Experiment-{expid}
+series_name_template: "Experiment-{expid}.czi #1"
+output_base_uri: "FOLDER_LOCATION"
+output_name: results_output_1
+output_vis_template: vis{expid}.png
+output_csv_template: results{expid}.csv
+nuclear_channel_first: True
+bad_col: [10, 14, 96]
+good_col: [103, 20, 0]
+params:
+  ks: 11
+  bs: 191
+  sigma: 2
+  probethresh: 6
+  ball_size: 3

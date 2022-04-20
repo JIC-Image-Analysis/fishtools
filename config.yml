@@ -1,0 +1,21 @@
+---
+images_root_dirpath: ""
+ids_uri: "$REPLACE_WITH_ids_FOLDER_LOCATION"
+annotation_dirpath: "$REPLACE_WITH_annot_FOLDER_LOCATION"
+annotation_csv_template: coordinates{expid}.csv
+good_value: 0
+bad_value: 1
+nuc_value: 2
+image_name_template: Experiment-{expid}
+series_name_template: "Experiment-{expid}.czi #1"
+output_base_uri: "results/"
+output_name: testing_1
+output_vis_template: vis{expid}.png
+output_csv_template: results{expid}.csv
+nuclear_channel_first: True
+params:
+  ks: 11
+  bs: 191
+  sigma: 2
+  probethresh: 4
+  ball_size: 3
